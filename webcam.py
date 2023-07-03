@@ -4,9 +4,9 @@ from spectral_analyzer import SpectralAnalyzer
 window_name = "Spectrometer"
 
 region_start_x = 800
-region_start_y = 200
+region_start_y = 300
 region_end_x = 1270
-region_end_y = 600
+region_end_y = 700
 rs_x = region_start_x + 2
 rs_y = region_start_y + 2
 re_x = region_end_x - 2
@@ -14,7 +14,7 @@ re_y = region_end_y - 2
   
 sa = SpectralAnalyzer()
   
-capture = cv2.VideoCapture(1, cv2.CAP_DSHOW)
+capture = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 capture.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
 capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
 ret, frame = capture.read()
