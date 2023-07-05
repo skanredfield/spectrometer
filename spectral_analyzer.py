@@ -32,9 +32,6 @@ class SpectralAnalyzer:
             b_dist.append(b_val)
             i_dist.append(i_val)
         
-        plt.subplot(4, 1, 1)
-        plt.imshow(img, interpolation='nearest', aspect='auto')
-
         # fix the right side of the image, as the camera brightens the right side
         r_scale_fix = np.linspace(1.0, 0.5, len(r_dist))
         g_scale_fix = np.linspace(1.0, 0.5, len(g_dist))
@@ -43,7 +40,6 @@ class SpectralAnalyzer:
         g_dist = g_dist * g_scale_fix
         b_dist = b_dist * b_scale_fix
         
-        # TODO: normalize intensities before searching for peaks
         min_line_height = min(min(r_dist), min(g_dist), min(b_dist))
         max_line_height = max(max(r_dist), max(g_dist), max(b_dist))
         r_dist_normalized = r_dist / max_line_height
@@ -51,72 +47,21 @@ class SpectralAnalyzer:
         b_dist_normalized = b_dist / max_line_height
 
         # height value serves as the threshold on the amplitude of the peak and is picked by trial and error
-        # r_peaks, _ = find_peaks(r_dist, height=40)
-        # g_peaks, _ = find_peaks(g_dist, height=40)
-        # b_peaks, _ = find_peaks(b_dist, height=40)
-        r_peaks, _ = find_peaks(r_dist_normalized, height=0.6)
-        g_peaks, _ = find_peaks(g_dist_normalized, height=0.6)
-        b_peaks, _ = find_peaks(b_dist_normalized, height=0.6)
+        r_peaks, _ = find_peaks(r_dist_normalized, height=0.5)
+        g_peaks, _ = find_peaks(g_dist_normalized, height=0.5)
+        b_peaks, _ = find_peaks(b_dist_normalized, height=0.5)
 
         # Important! r_peaks, g_peaks, b_peaks are the indices of peaks!
-        # print(r_peaks)
 
-        # r_fourier = dft(r_peaks)
-        # g_fourier = dft(g_peaks)
-        # b_fourier = dft(b_peaks)
-
-        # r_fourier_freqs = [x.freq for x in r_fourier]
-        # g_fourier_freqs = [x.freq for x in g_fourier]
-        # b_fourier_freqs = [x.freq for x in b_fourier]
-        # print(r_fourier_freqs)
-        # print(g_fourier_freqs)
-        # print(b_fourier_freqs)
-
-        ax = plt.subplot(4, 1, 2)
-
-        plt.plot(r_dist_normalized, color='r')
-        # plt.plot(r_peaks, [r_dist[i] for i in r_peaks], '*')
-        plt.plot(g_dist_normalized, color='g')
-        plt.plot(b_dist_normalized, color='b')
-        # plt.plot(i_dist, color='k', label='mean')
-        plt.margins(x=0)
-
-        # show peaks
-        self._annotate_max(ax, ax.lines[0].get_xdata(), r_dist_normalized, g_dist_normalized, b_dist_normalized)
-        # plt.vlines(r_peaks, ymin=min(r_dist), ymax=max(r_dist))
-        # plt.vlines(g_peaks, ymin=min(g_dist), ymax=max(g_dist))
-        # plt.vlines(b_peaks, ymin=min(b_dist), ymax=max(b_dist))
-
-
-
-        # plt.legend(loc="upper left")
-
-        # plt.margins(y=0.3)
-
-        plt.subplot(4, 1, 3)
-        self._draw_spectrum((min_line_height, max_line_height))
-
-        # r_peaks = np.array(self._remap_range(r_peaks, 380, 750))
-        # g_peaks = np.array(self._remap_range(g_peaks, 380, 750))
-        # b_peaks = np.array(self._remap_range(b_peaks, 380, 750))
-        # r_peaks = np.array(self._remap_range(r_peaks, 620, 750))
         r_peaks = np.array(self._remap_range(r_peaks, 589, 750))
         g_peaks = np.array(self._remap_range(g_peaks, 490, 570))
         b_peaks = np.array(self._remap_range(b_peaks, 430, 490))
 
-        plt.vlines(r_peaks, ymin=min_line_height, ymax=max_line_height, color='black')
-        plt.vlines(g_peaks, ymin=min_line_height, ymax=max_line_height, color='black')
-        plt.vlines(b_peaks, ymin=min_line_height, ymax=max_line_height, color='black')
+        self._plot_interference_pattern(img)
+        self._plot_rgb_curves(r_dist_normalized, g_dist_normalized, b_dist_normalized)
+        self._plot_spectrum_black_lines(min_line_height, max_line_height, r_peaks, g_peaks, b_peaks)
         ylim_bottom, ylim_top = plt.ylim()
-        
-        subplot4 = plt.subplot(4, 1, 4)
-        # invert color to show emission lines
-        plt.vlines(r_peaks, ymin=min_line_height, ymax=max_line_height, color=np_wavelength_to_rgb(r_peaks))
-        plt.vlines(g_peaks, ymin=min_line_height, ymax=max_line_height, color=np_wavelength_to_rgb(g_peaks))
-        plt.vlines(b_peaks, ymin=min_line_height, ymax=max_line_height, color=np_wavelength_to_rgb(b_peaks))
-        plt.xlim([380, 750])
-        plt.ylim([ylim_bottom, ylim_top])
-        subplot4.set_facecolor("black")
+        self._plot_emission_lines(min_line_height, max_line_height, r_peaks, g_peaks, b_peaks, ylim_bottom, ylim_top)
 
 
         plt.subplots_adjust(left=0.1,
@@ -128,6 +73,55 @@ class SpectralAnalyzer:
         
         plt.savefig("output/result.png")
         plt.show()
+        
+
+    def _plot_interference_pattern(self, img):
+        ax1 = plt.subplot(4, 1, 1)
+        plt.imshow(img, interpolation='nearest', aspect='auto')
+
+        # Warning! The angles are picked for the prototype spectrometer and to match the sodium line based
+        # on the standard DVD grating spacing of 0.74 micron
+        start_angle_rad = 0
+        end_angle_rad = 1.27
+
+        ax2 = ax1.twiny()
+        ax2.plot(np.linspace(start_angle_rad, end_angle_rad, 20), np.ones(20))
+        ax2.set_xlim([start_angle_rad, end_angle_rad])
+        ax2.set_xlabel(r"Angle, \phi (rad)")
+
+    def _plot_rgb_curves(self, r_dist_normalized, g_dist_normalized, b_dist_normalized):
+        ax = plt.subplot(4, 1, 2)
+
+        plt.plot(r_dist_normalized, color='r')
+        # plt.plot(r_peaks, [r_dist[i] for i in r_peaks], '*')
+        plt.plot(g_dist_normalized, color='g')
+        plt.plot(b_dist_normalized, color='b')
+        # plt.plot(i_dist, color='k', label='mean')
+        plt.margins(x=0)
+
+        # show peaks
+        self._annotate_max(ax, ax.lines[0].get_xdata(), r_dist_normalized, g_dist_normalized, b_dist_normalized)
+
+    def _plot_spectrum_black_lines(self, min_line_height, max_line_height, r_peaks, g_peaks, b_peaks):
+        plt.subplot(4, 1, 3)
+        self._draw_spectrum((min_line_height, max_line_height))
+
+        plt.vlines(r_peaks, ymin=min_line_height, ymax=max_line_height, color='black')
+        plt.vlines(g_peaks, ymin=min_line_height, ymax=max_line_height, color='black')
+        plt.vlines(b_peaks, ymin=min_line_height, ymax=max_line_height, color='black')
+
+    def _plot_emission_lines(self, min_line_height, max_line_height, r_peaks, g_peaks, b_peaks, ylim_bottom, ylim_top):
+        subplot4 = plt.subplot(4, 1, 4)
+        # invert color to show emission lines
+        plt.vlines(r_peaks, ymin=min_line_height, ymax=max_line_height, color=np_wavelength_to_rgb(r_peaks))
+        plt.vlines(g_peaks, ymin=min_line_height, ymax=max_line_height, color=np_wavelength_to_rgb(g_peaks))
+        plt.vlines(b_peaks, ymin=min_line_height, ymax=max_line_height, color=np_wavelength_to_rgb(b_peaks))
+        plt.xlim([380, 750])
+        plt.ylim([ylim_bottom, ylim_top])
+        subplot4.set_facecolor("black")
+
+
+
 
     def _draw_spectrum(self, y_range=(-1,-1)):
         min_wavelength = 380
