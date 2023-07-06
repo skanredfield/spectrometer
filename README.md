@@ -4,4 +4,4 @@ Software package for a custom spectrometer used for labs and simple experiments.
 
 Below is an example of the sodium spectral lines captured by the spectrometer and process by the software.
 
-![Sodium spectral lines](https://github.com/skanredfield/spectrometer/demo_images/sodium.png)
+![Sodium spectral lines](https://github.com/skanredfield/spectrometer/blob/main/demo_images/sodium.png)
